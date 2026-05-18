@@ -72,6 +72,8 @@ cat > "${PLIST_FILE}" <<EOL
     <string>NSApplication</string>
     <key>LSUIElement</key>
     <true/>
+    <key>CFBundleIconFile</key>
+    <string>icon</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
 </dict>
