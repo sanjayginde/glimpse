@@ -34,7 +34,7 @@ let image = NSImage(size: NSSize(width: canvasSize, height: canvasSize), flipped
     let cardY: CGFloat = (canvasSize - cardH) / 2 - 16
     let cardCorner: CGFloat = 60
     let cardRect = NSRect(x: cardX, y: cardY, width: cardW, height: cardH)
-    let headerH: CGFloat = 210
+    let headerH: CGFloat = 56
 
     // Card drop shadow
     ctx.saveGState()
@@ -48,32 +48,20 @@ let image = NSImage(size: NSSize(width: canvasSize, height: canvasSize), flipped
     ctx.saveGState()
     NSBezierPath(roundedRect: cardRect, xRadius: cardCorner, yRadius: cardCorner).addClip()
 
-    // Header
+    // Thin accent strip at top (no text)
     NSColor(red: 0.22, green: 0.48, blue: 1.00, alpha: 1).setFill()
     NSBezierPath(rect: NSRect(x: cardX, y: cardY + cardH - headerH, width: cardW, height: headerH)).fill()
 
-    // Month label
+    // ── Day grid ─────────────────────────────────────────────────────
     let para = NSMutableParagraphStyle()
     para.alignment = .center
-    let monthStr = NSAttributedString(string: "MAY", attributes: [
-        .font: NSFont.systemFont(ofSize: 96, weight: .heavy),
-        .foregroundColor: NSColor.white,
-        .paragraphStyle: para,
-    ])
-    let mSize = monthStr.size()
-    monthStr.draw(at: NSPoint(
-        x: cardX + (cardW - mSize.width) / 2,
-        y: cardY + cardH - headerH + (headerH - mSize.height) / 2
-    ))
-
-    // ── Day grid ─────────────────────────────────────────────────────
     let gridPad: CGFloat = 52
     let gridX = cardX + gridPad
     let gridW = cardW - gridPad * 2
-    let gridTop = cardY + cardH - headerH - 20
+    let gridTop = cardY + cardH - headerH - 28
     let cellW = gridW / 7
-    let cellH: CGFloat = 78
-    let numRows = 5
+    let cellH: CGFloat = 82
+    let numRows = 6
 
     for row in 0..<numRows {
         for col in 0..<7 {
@@ -84,7 +72,6 @@ let image = NSImage(size: NSSize(width: canvasSize, height: canvasSize), flipped
             let isDOWHeader = (row == 0)
 
             if isToday {
-                // Accent circle + date number
                 let r: CGFloat = 44
                 NSColor(red: 0.22, green: 0.48, blue: 1.00, alpha: 1).setFill()
                 NSBezierPath(ovalIn: NSRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2)).fill()
