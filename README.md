@@ -4,6 +4,8 @@ A macOS menu bar calendar app — a modern port of [Quick View Calendar](https:/
 
 The original Quick View Calendar is an Intel-only app that is no longer maintained. Glimpse replicates its core functionality and adds a few quality-of-life improvements.
 
+![Screenshot](assets/screenshot.png "Glimpse screenshot")
+
 ## Features
 
 - Monthly calendar popup from the menu bar
