@@ -42,6 +42,7 @@ SwiftUI-native `MenuBarExtra` with `.window` style — no AppDelegate or NSStatu
 | `showWeekNumbers` | Bool | true | Week number column |
 | `showDateInIcon` | Bool | true | Day number in menu bar icon |
 | `firstWeekday` | Int | 1 | First day of week (1=Sun, 2=Mon, 7=Sat) |
+| `showRollingWeeks` | Bool | false | Toggle rolling 6-week view (vs. classic month grid) |
 
 ## Concurrency
 

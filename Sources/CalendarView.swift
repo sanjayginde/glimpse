@@ -59,16 +59,80 @@ func buildWeekRows(for monthStart: Date, firstWeekday: Int = 1) -> [CalendarWeek
     }
 }
 
+/// Start of the 42-day rolling window: one week before the start of the week containing `anchor`.
+private func rollingWindowStart(anchor: Date, firstWeekday: Int) -> Date? {
+    var cal = Calendar.current
+    cal.firstWeekday = firstWeekday
+    guard let thisWeekStart = cal.dateInterval(of: .weekOfYear, for: anchor)?.start else { return nil }
+    return cal.date(byAdding: .weekOfYear, value: -1, to: thisWeekStart)
+}
+
+func buildRollingWeekRows(anchor: Date, firstWeekday: Int = 1) -> [CalendarWeekRow] {
+    var cal = Calendar.current
+    cal.firstWeekday = firstWeekday
+
+    guard let windowStart = rollingWindowStart(anchor: anchor, firstWeekday: firstWeekday) else { return [] }
+
+    let today = Date()
+    let todayMonth = cal.component(.month, from: today)
+    let todayYear = cal.component(.year, from: today)
+
+    var cells: [CalendarDay] = []
+    for i in 0..<42 {
+        guard let date = cal.date(byAdding: .day, value: i, to: windowStart) else { continue }
+        let month = cal.component(.month, from: date)
+        let year = cal.component(.year, from: date)
+        cells.append(.init(id: "r\(i)", dayNumber: cal.component(.day, from: date),
+                           isCurrentMonth: month == todayMonth && year == todayYear,
+                           isToday: cal.isDateInToday(date), weekdayIndex: 0))
+    }
+
+    return (0..<6).map { row in
+        let slice = Array(cells[(row * 7)..<(row * 7 + 7)])
+        let days = slice.enumerated().map { col, day in
+            CalendarDay(id: day.id, dayNumber: day.dayNumber,
+                        isCurrentMonth: day.isCurrentMonth, isToday: day.isToday,
+                        weekdayIndex: (firstWeekday - 1 + col) % 7)
+        }
+        let rowDate = cal.date(byAdding: .day, value: row * 7, to: windowStart) ?? windowStart
+        return CalendarWeekRow(id: row, weekNumber: cal.component(.weekOfYear, from: rowDate), days: days)
+    }
+}
+
 struct CalendarView: View {
     @State private var displayedMonth: Date = currentMonthStart()
+    @State private var displayedWeekAnchor: Date = Date()
     @AppStorage("showWeekNumbers") private var showWeekNumbers: Bool = true
     @AppStorage("showDateInIcon") private var showDateInIcon: Bool = true
     @AppStorage("firstWeekday") private var firstWeekday: Int = 1
+    @AppStorage("showRollingWeeks") private var showRollingWeeks: Bool = false
 
     private var headerTitle: String {
         let f = DateFormatter()
         f.dateFormat = "MMMM yyyy"
         return f.string(from: displayedMonth)
+    }
+
+    private var rollingHeaderTitle: String {
+        let cal = Calendar.current
+        guard let start = rollingWindowStart(anchor: displayedWeekAnchor, firstWeekday: firstWeekday),
+              let end = cal.date(byAdding: .day, value: 41, to: start) else {
+            return ""
+        }
+
+        let startYear = cal.component(.year, from: start)
+        let endYear = cal.component(.year, from: end)
+
+        let shortFormatter = DateFormatter()
+        shortFormatter.dateFormat = "MMM d"
+        let longFormatter = DateFormatter()
+        longFormatter.dateFormat = "MMM d, yyyy"
+
+        if startYear == endYear {
+            return "\(shortFormatter.string(from: start)) – \(longFormatter.string(from: end))"
+        } else {
+            return "\(longFormatter.string(from: start)) – \(longFormatter.string(from: end))"
+        }
     }
 
     private var dowLabels: [String] {
@@ -78,17 +142,19 @@ struct CalendarView: View {
     }
 
     var body: some View {
-        let rows = buildWeekRows(for: displayedMonth, firstWeekday: firstWeekday)
+        let rows = showRollingWeeks
+            ? buildRollingWeekRows(anchor: displayedWeekAnchor, firstWeekday: firstWeekday)
+            : buildWeekRows(for: displayedMonth, firstWeekday: firstWeekday)
         VStack(spacing: 4) {
 
             // ── Month navigation ──────────────────────────────────────
             HStack {
-                navButton(systemImage: "chevron.left") { goMonth(-1) }
+                navButton(systemImage: "chevron.left") { showRollingWeeks ? goWeek(-1) : goMonth(-1) }
                 Spacer()
-                Text(headerTitle)
+                Text(showRollingWeeks ? rollingHeaderTitle : headerTitle)
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
-                navButton(systemImage: "chevron.right") { goMonth(1) }
+                navButton(systemImage: "chevron.right") { showRollingWeeks ? goWeek(1) : goMonth(1) }
             }
             .padding(.horizontal, 6)
 
@@ -130,6 +196,7 @@ struct CalendarView: View {
             // ── Footer ───────────────────────────────────────────────
             FooterToggleRow(title: "Show Week Numbers", isOn: $showWeekNumbers)
             FooterToggleRow(title: "Show Date in Menu Icon", isOn: $showDateInIcon)
+            FooterToggleRow(title: "Rolling 6-Week View", isOn: $showRollingWeeks)
 
             HStack {
                 Text("First Day of Week")
@@ -157,6 +224,7 @@ struct CalendarView: View {
         .frame(width: showWeekNumbers ? 274 : 254)
         .onAppear {
             displayedMonth = currentMonthStart()
+            displayedWeekAnchor = Date()
         }
     }
 
@@ -182,6 +250,12 @@ struct CalendarView: View {
     private func goMonth(_ delta: Int) {
         if let next = Calendar.current.date(byAdding: .month, value: delta, to: displayedMonth) {
             displayedMonth = next
+        }
+    }
+
+    private func goWeek(_ delta: Int) {
+        if let next = Calendar.current.date(byAdding: .weekOfYear, value: delta, to: displayedWeekAnchor) {
+            displayedWeekAnchor = next
         }
     }
 }
