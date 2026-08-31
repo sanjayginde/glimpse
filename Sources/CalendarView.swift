@@ -61,6 +61,7 @@ func buildWeekRows(for monthStart: Date, firstWeekday: Int = 1) -> [CalendarWeek
 
 struct CalendarView: View {
     @State private var displayedMonth: Date = currentMonthStart()
+    @State private var isTitleHovered = false
     @AppStorage("showWeekNumbers") private var showWeekNumbers: Bool = true
     @AppStorage("showDateInIcon") private var showDateInIcon: Bool = true
     @AppStorage("firstWeekday") private var firstWeekday: Int = 1
@@ -85,8 +86,14 @@ struct CalendarView: View {
             HStack {
                 navButton(systemImage: "chevron.left") { goMonth(-1) }
                 Spacer()
-                Text(headerTitle)
-                    .font(.system(size: 13, weight: .semibold))
+                Button(action: goToToday) {
+                    Text(headerTitle)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(isTitleHovered ? Color.accentColor : Color.primary)
+                }
+                .buttonStyle(.plain)
+                .help("Go to Today")
+                .onHover { isTitleHovered = $0 }
                 Spacer()
                 navButton(systemImage: "chevron.right") { goMonth(1) }
             }
@@ -124,6 +131,7 @@ struct CalendarView: View {
                     }
                 }
             }
+            .background(SwipeGestureView(onSwipe: goMonth))
 
             Divider().padding(.vertical, 2)
 
@@ -184,11 +192,80 @@ struct CalendarView: View {
             displayedMonth = next
         }
     }
+
+    private func goToToday() {
+        displayedMonth = currentMonthStart()
+    }
 }
 
 private func currentMonthStart() -> Date {
     let c = Calendar.current
     return c.date(from: c.dateComponents([.year, .month], from: Date()))!
+}
+
+// ── Two-finger trackpad swipe → month navigation ────────────────────────────
+// SwiftUI has no swipe gesture for trackpad scroll events, so this wraps an
+// NSView that reads NSEvent scroll-wheel deltas directly.
+
+private struct SwipeGestureView: NSViewRepresentable {
+    let onSwipe: (Int) -> Void
+
+    func makeNSView(context: Context) -> SwipeCatcherNSView {
+        let view = SwipeCatcherNSView()
+        view.onSwipe = onSwipe
+        return view
+    }
+
+    func updateNSView(_ nsView: SwipeCatcherNSView, context: Context) {
+        nsView.onSwipe = onSwipe
+    }
+}
+
+private final class SwipeCatcherNSView: NSView {
+    var onSwipe: ((Int) -> Void)?
+
+    // Only fire once per continuous gesture, no matter how far the fingers travel.
+    private var accumulatedX: CGFloat = 0
+    private var accumulatedY: CGFloat = 0
+    private var hasFiredForGesture = false
+    private let triggerThreshold: CGFloat = 50
+
+    override func scrollWheel(with event: NSEvent) {
+        // hasPreciseScrollingDeltas is true for trackpad/Magic Mouse gestures,
+        // false for a traditional mouse wheel — filters out non-swipe input.
+        guard event.hasPreciseScrollingDeltas else {
+            super.scrollWheel(with: event)
+            return
+        }
+
+        switch event.phase {
+        case .began:
+            accumulatedX = 0
+            accumulatedY = 0
+            hasFiredForGesture = false
+
+        case .changed:
+            accumulatedX += event.scrollingDeltaX
+            accumulatedY += event.scrollingDeltaY
+
+            guard !hasFiredForGesture,
+                  abs(accumulatedX) > abs(accumulatedY),
+                  abs(accumulatedX) > triggerThreshold else { return }
+
+            hasFiredForGesture = true
+            // Swipe left (negative deltaX) advances to next month, matching
+            // the page-forward convention used by Calendar/Preview.
+            onSwipe?(accumulatedX < 0 ? 1 : -1)
+
+        case .ended, .cancelled:
+            accumulatedX = 0
+            accumulatedY = 0
+            hasFiredForGesture = false
+
+        default:
+            break
+        }
+    }
 }
 
 // ── Day cell ──────────────────────────────────────────────────────────────────
