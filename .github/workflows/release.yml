@@ -84,7 +84,16 @@ jobs:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
       - name: Bump cask
+        id: bump
         run: |
+          # Re-runs of an older job must not roll the cask back to a stale version
+          CURRENT=$(sed -nE 's/^  version "(.*)"/\1/p' Casks/glimpse.rb)
+          NEWEST=$(printf '%s\n%s\n' "${CURRENT}" "${VERSION}" | sort -V | tail -1)
+          if [ "${VERSION}" == "${CURRENT}" ] || [ "${NEWEST}" != "${VERSION}" ]; then
+            echo "::notice::Cask is at ${CURRENT}; skipping ${VERSION}"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           sed -i -E \
             -e "s/^  version \".*\"/  version \"${VERSION}\"/" \
             -e "s/^  sha256 \".*\"/  sha256 \"${SHA256}\"/" \
@@ -92,6 +101,7 @@ jobs:
           git diff
 
       - name: Push
+        if: steps.bump.outputs.skip != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
