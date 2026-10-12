@@ -4,7 +4,7 @@ set -euo pipefail
 TARGET_NAME="Glimpse"
 APP_NAME="Glimpse"
 BUNDLE_ID="dev.sanjayginde.glimpse"
-BUILD_DIR=".build/release"
+VERSION="${VERSION:-1.0}"
 APP_DIR="${APP_NAME}.app"
 CONTENTS_DIR="${APP_DIR}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
@@ -20,6 +20,7 @@ fi
 
 echo "Building the app..."
 swift build -c release
+BUILD_DIR="$(swift build -c release --show-bin-path)"
 
 echo "Creating .app bundle structure..."
 mkdir -p "${MACOS_DIR}"
@@ -61,9 +62,9 @@ cat > "${PLIST_FILE}" <<EOL
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleVersion</key>
-    <string>1.0</string>
+    <string>${VERSION}</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>${VERSION}</string>
     <key>CFBundleExecutable</key>
     <string>${TARGET_NAME}</string>
     <key>CFBundlePackageType</key>
