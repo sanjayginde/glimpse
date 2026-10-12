@@ -65,6 +65,7 @@ struct CalendarView: View {
     @AppStorage("showWeekNumbers") private var showWeekNumbers: Bool = true
     @AppStorage("showDateInIcon") private var showDateInIcon: Bool = true
     @AppStorage("firstWeekday") private var firstWeekday: Int = 1
+    @AppStorage("alwaysDarkMode") private var alwaysDarkMode: Bool = false
 
     private var headerTitle: String {
         let f = DateFormatter()
@@ -138,6 +139,7 @@ struct CalendarView: View {
             // ── Footer ───────────────────────────────────────────────
             FooterToggleRow(title: "Show Week Numbers", isOn: $showWeekNumbers)
             FooterToggleRow(title: "Show Date in Menu Icon", isOn: $showDateInIcon)
+            FooterToggleRow(title: "Always Use Dark Mode", isOn: $alwaysDarkMode)
 
             HStack {
                 Text("First Day of Week")
@@ -165,7 +167,9 @@ struct CalendarView: View {
         .frame(width: showWeekNumbers ? 274 : 254)
         .onAppear {
             displayedMonth = currentMonthStart()
+            applyAppearance(alwaysDark: alwaysDarkMode)
         }
+        .onChange(of: alwaysDarkMode) { applyAppearance(alwaysDark: $0) }
     }
 
     // ── Navigation button — .glass on Tahoe, .plain on older ─────────
@@ -175,6 +179,7 @@ struct CalendarView: View {
             Button(action: action) {
                 Image(systemName: systemImage)
                     .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
                     .padding(4)
             }
             .buttonStyle(.glass)
@@ -185,6 +190,11 @@ struct CalendarView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    // .preferredColorScheme doesn't reach the MenuBarExtra panel, so set it app-wide
+    private func applyAppearance(alwaysDark: Bool) {
+        NSApp.appearance = alwaysDark ? NSAppearance(named: .darkAqua) : nil
     }
 
     private func goMonth(_ delta: Int) {
