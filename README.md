@@ -29,6 +29,9 @@ macOS 13 or later
 
 # Install to /Applications
 ./build-macos-app.sh --install
+
+# Install to ~/Applications instead (no admin rights needed)
+./build-macos-app.sh --install-user
 ```
 
 ## Credits

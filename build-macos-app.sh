@@ -11,11 +11,39 @@ MACOS_DIR="${CONTENTS_DIR}/MacOS"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 PLIST_FILE="${CONTENTS_DIR}/Info.plist"
 
-if [ "${1:-}" != "--skip-clean" ]; then
+SKIP_CLEAN=false
+NOTARIZE=false
+INSTALL_DIR=""
+
+usage() {
+  cat <<USAGE
+Usage: $0 [options]
+
+  --skip-clean     Incremental build (skip rm -rf .build)
+  --notarize       Notarize and staple the app bundle
+  --install        Install to /Applications (required for SMAppService login item)
+  --install-user   Install to ~/Applications
+  -h, --help       Show this help
+USAGE
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --skip-clean)   SKIP_CLEAN=true ;;
+    --notarize)     NOTARIZE=true ;;
+    --install)      INSTALL_DIR="/Applications" ;;
+    --install-user) INSTALL_DIR="${HOME}/Applications" ;;
+    -h|--help)      usage; exit 0 ;;
+    *)              echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
+  esac
+  shift
+done
+
+if [ "${SKIP_CLEAN}" = true ]; then
+  echo "Skipping clean (incremental build)..."
+else
   echo "Cleaning previous build..."
   rm -rf .build "${APP_DIR}" icon.iconset
-else
-  echo "Skipping clean (incremental build)..."
 fi
 
 echo "Building the app..."
@@ -86,7 +114,7 @@ chmod +x "${MACOS_DIR}/${TARGET_NAME}"
 echo "Signing the app..."
 codesign --force --deep --sign - "${APP_DIR}"
 
-if [ "${1:-}" == "--notarize" ]; then
+if [ "${NOTARIZE}" = true ]; then
     echo "Notarizing the app..."
     zip -r "${APP_NAME}.zip" "${APP_DIR}"
     xcrun notarytool submit "${APP_NAME}.zip" --keychain-profile "Quick View Calendar" --wait
@@ -94,11 +122,16 @@ if [ "${1:-}" == "--notarize" ]; then
     rm -f "${APP_NAME}.zip"
 fi
 
-if [ "${1:-}" == "--install" ]; then
-    echo "Installing to /Applications..."
-    rm -rf "/Applications/${APP_DIR}"
-    cp -R "${APP_DIR}" "/Applications/"
-    echo "Installed to /Applications/${APP_DIR}"
+if [ -n "${INSTALL_DIR}" ]; then
+    echo "Installing to ${INSTALL_DIR}..."
+    mkdir -p "${INSTALL_DIR}"
+    if pgrep -x "${TARGET_NAME}" >/dev/null; then
+      echo "Quitting running ${APP_NAME}..."
+      osascript -e "tell application \"${APP_NAME}\" to quit" 2>/dev/null || killall "${TARGET_NAME}" 2>/dev/null || true
+    fi
+    rm -rf "${INSTALL_DIR}/${APP_DIR}"
+    cp -R "${APP_DIR}" "${INSTALL_DIR}/"
+    echo "Installed to ${INSTALL_DIR}/${APP_DIR}"
 fi
 
 echo "Build complete: ${APP_DIR}"
