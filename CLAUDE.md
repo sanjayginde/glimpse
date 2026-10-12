@@ -54,3 +54,4 @@ Swift 6 strict concurrency. `DayProvider` is `@MainActor`. Timer callbacks use `
 - `SMAppService.mainApp.register()` silently fails when run outside `/Applications`; use `--install` flag for testing login item
 - Midnight timer uses a recursive one-shot pattern (not 24h repeating) to correctly handle DST transitions
 - `.buttonStyle(.glass)` on nav buttons gated behind `#available(macOS 26, *)` — falls back to `.plain` on older systems
+- Releases are built by `.github/workflows/release.yml` (pushes to `main` touching `Sources/`, `Resources/`, `Package.swift`); the `update-tap` job then bumps `Casks/glimpse.rb` in `sanjayginde/homebrew-tap` using the `HOMEBREW_TAP_TOKEN` secret

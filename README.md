@@ -21,6 +21,14 @@ The original Quick View Calendar is an Intel-only app that is no longer maintain
 
 macOS 13 or later
 
+## Install
+
+```bash
+brew install --cask sanjayginde/tap/glimpse
+```
+
+Or download the latest zip from [Releases](https://github.com/sanjayginde/glimpse/releases). Glimpse is ad-hoc signed (not notarized), so for a manual download run `xattr -dr com.apple.quarantine Glimpse.app` before first launch. The Homebrew cask does this for you.
+
 ## Build
 
 ```bash

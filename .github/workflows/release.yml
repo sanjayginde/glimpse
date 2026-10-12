@@ -31,6 +31,9 @@ jobs:
     runs-on: macos-26
     env:
       VERSION: 1.0.${{ github.run_number }}
+    outputs:
+      version: ${{ steps.package.outputs.version }}
+      sha256: ${{ steps.package.outputs.sha256 }}
     steps:
       - uses: actions/checkout@v5
 
@@ -43,8 +46,11 @@ jobs:
         run: ./build-macos-app.sh
 
       - name: Package
+        id: package
         run: |
           ditto -c -k --keepParent Glimpse.app "Glimpse-${VERSION}.zip"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(shasum -a 256 "Glimpse-${VERSION}.zip" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Upload build artifact
         if: github.event_name == 'pull_request'
@@ -62,3 +68,32 @@ jobs:
             --target "${GITHUB_SHA}" \
             --title "Glimpse ${VERSION}" \
             --generate-notes
+
+  update-tap:
+    needs: release
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.release.outputs.version }}
+      SHA256: ${{ needs.release.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: sanjayginde/homebrew-tap
+          # Fine-grained PAT with Contents: read & write on sanjayginde/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Bump cask
+        run: |
+          sed -i -E \
+            -e "s/^  version \".*\"/  version \"${VERSION}\"/" \
+            -e "s/^  sha256 \".*\"/  sha256 \"${SHA256}\"/" \
+            Casks/glimpse.rb
+          git diff
+
+      - name: Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "glimpse ${VERSION}"
+          git push
