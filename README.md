@@ -37,6 +37,9 @@ Or download the latest zip from [Releases](https://github.com/sanjayginde/glimps
 
 # Install to /Applications
 ./build-macos-app.sh --install
+
+# Install to ~/Applications instead (no admin rights needed)
+./build-macos-app.sh --install-user
 ```
 
 ## Credits

@@ -18,6 +18,9 @@ swift build
 # Build and install to /Applications (required for SMAppService login item)
 ./build-macos-app.sh --install
 
+# Build and install to ~/Applications (no sudo/admin needed)
+./build-macos-app.sh --install-user
+
 # Run after building
 open "Glimpse.app"
 ```
