@@ -42,6 +42,7 @@ SwiftUI-native `MenuBarExtra` with `.window` style — no AppDelegate or NSStatu
 | `showWeekNumbers` | Bool | true | Week number column |
 | `showDateInIcon` | Bool | true | Day number in menu bar icon |
 | `firstWeekday` | Int | 1 | First day of week (1=Sun, 2=Mon, 7=Sat) |
+| `alwaysDarkMode` | Bool | false | Force dark appearance for the popup |
 
 ## Concurrency
 
