@@ -24,6 +24,12 @@ Usage: $0 [options]
   --install        Install to /Applications (required for SMAppService login item)
   --install-user   Install to ~/Applications
   -h, --help       Show this help
+
+Environment:
+  SIGN_IDENTITY    codesign identity (default "-" = ad-hoc)
+  NOTARY_PROFILE   notarytool keychain profile (default "glimpse-notary")
+  NOTARY_KEY_PATH, NOTARY_KEY_ID, NOTARY_ISSUER
+                   App Store Connect API key; used instead of NOTARY_PROFILE when set
 USAGE
 }
 
@@ -112,15 +118,36 @@ EOL
 echo "Setting executable permissions..."
 chmod +x "${MACOS_DIR}/${TARGET_NAME}"
 
-echo "Signing the app..."
-codesign --force --deep --sign - "${APP_DIR}"
+# "-" = ad-hoc (local dev); set to a "Developer ID Application: ..." identity for distribution
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+
+if [ "${NOTARIZE}" = true ] && [ "${SIGN_IDENTITY}" = "-" ]; then
+  echo "--notarize requires SIGN_IDENTITY to be a Developer ID Application identity" >&2
+  exit 1
+fi
+
+echo "Signing the app (${SIGN_IDENTITY})..."
+if [ "${SIGN_IDENTITY}" = "-" ]; then
+  codesign --force --sign - "${APP_DIR}"
+else
+  # Hardened runtime + secure timestamp are required for notarization
+  codesign --force --options runtime --timestamp --sign "${SIGN_IDENTITY}" "${APP_DIR}"
+fi
+codesign --verify --strict --verbose=2 "${APP_DIR}"
 
 if [ "${NOTARIZE}" = true ]; then
     echo "Notarizing the app..."
-    zip -r "${APP_NAME}.zip" "${APP_DIR}"
-    xcrun notarytool submit "${APP_NAME}.zip" --keychain-profile "Quick View Calendar" --wait
+    # CI authenticates with an App Store Connect API key; locally, a stored keychain profile
+    if [ -n "${NOTARY_KEY_PATH:-}" ]; then
+      NOTARY_AUTH=(--key "${NOTARY_KEY_PATH}" --key-id "${NOTARY_KEY_ID}" --issuer "${NOTARY_ISSUER}")
+    else
+      NOTARY_AUTH=(--keychain-profile "${NOTARY_PROFILE:-glimpse-notary}")
+    fi
+    ditto -c -k --keepParent "${APP_DIR}" "${APP_NAME}-notarize.zip"
+    xcrun notarytool submit "${APP_NAME}-notarize.zip" "${NOTARY_AUTH[@]}" --wait
+    rm -f "${APP_NAME}-notarize.zip"
     xcrun stapler staple "${APP_DIR}"
-    rm -f "${APP_NAME}.zip"
+    spctl --assess --type execute --verbose=4 "${APP_DIR}"
 fi
 
 if [ -n "${INSTALL_DIR}" ]; then
