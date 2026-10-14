@@ -61,5 +61,5 @@ Swift 6 strict concurrency. `DayProvider` is `@MainActor`. Timer callbacks use `
 - Midnight timer uses a recursive one-shot pattern (not 24h repeating) to correctly handle DST transitions
 - `.buttonStyle(.glass)` on nav buttons gated behind `#available(macOS 26, *)` — falls back to `.plain` on older systems
 - Releases are built by `.github/workflows/release.yml` (pushes to `main` touching `Sources/`, `Resources/`, `Package.swift`); the `update-tap` job then bumps `Casks/glimpse.rb` in `sanjayginde/homebrew-tap` using the `HOMEBREW_TAP_TOKEN` secret
-- CI signs + notarizes when `MACOS_CERT_P12` / `MACOS_CERT_PASSWORD` / `NOTARY_KEY_P8` / `NOTARY_KEY_ID` / `NOTARY_ISSUER` secrets exist; without them it silently falls back to ad-hoc (warning only)
+- CI signs + notarizes when `MACOS_CERT_P12` / `MACOS_CERT_PASSWORD` / `NOTARY_KEY_P8` / `NOTARY_KEY_ID` / `NOTARY_ISSUER` secrets exist; a partial set fails, and with none only PR builds fall back to ad-hoc (releases fail rather than ship un-notarized)
 - Local builds with Command Line Tools fail (`SwiftUIMacros` plugin not found) — select full Xcode via `xcode-select`

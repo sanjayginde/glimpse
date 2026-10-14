@@ -48,9 +48,27 @@ jobs:
           MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
           MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
           NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
         run: |
-          # Without secrets (e.g. fork PRs) fall back to an ad-hoc build
-          if [ -z "${MACOS_CERT_P12}" ]; then
+          REQUIRED=(MACOS_CERT_P12 MACOS_CERT_PASSWORD NOTARY_KEY_P8 NOTARY_KEY_ID NOTARY_ISSUER)
+          MISSING=()
+          for name in "${REQUIRED[@]}"; do
+            [ -n "${!name}" ] || MISSING+=("${name}")
+          done
+
+          # A partial set is a misconfiguration, never a reason to quietly skip signing
+          if [ "${#MISSING[@]}" -gt 0 ] && [ "${#MISSING[@]}" -lt "${#REQUIRED[@]}" ]; then
+            echo "::error::Signing secrets incomplete; missing: ${MISSING[*]}"
+            exit 1
+          fi
+
+          if [ "${#MISSING[@]}" -eq "${#REQUIRED[@]}" ]; then
+            # Fork PRs get no secrets; releases must never ship un-notarized
+            if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
+              echo "::error::Signing secrets not configured; refusing to publish an un-notarized release"
+              exit 1
+            fi
             echo "::warning::No signing secrets; building ad-hoc signed"
             exit 0
           fi
