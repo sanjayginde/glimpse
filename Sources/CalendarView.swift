@@ -200,16 +200,15 @@ struct CalendarView: View {
 
     // Standard AppKit panel: icon, name, and version come from the bundle's Info.plist
     private func showAboutPanel() {
+        // The panel always draws its copyright line last, so render it here to keep the link below it
+        let copyright = Bundle.main.object(forInfoDictionaryKey: "NSHumanReadableCopyright") as? String ?? ""
         let credits = NSMutableAttributedString(
-            string: "By Sanjay Ginde\n",
-            attributes: [.foregroundColor: NSColor.labelColor]
+            string: "Inspired by Quick View Calendar by Jeffery Morgan\n\n",
+            attributes: [.foregroundColor: NSColor.secondaryLabelColor]
         )
+        credits.append(NSAttributedString(string: "\(copyright)\n", attributes: [.foregroundColor: NSColor.labelColor]))
         let repo = "https://github.com/sanjayginde/glimpse"
         credits.append(NSAttributedString(string: "github.com/sanjayginde/glimpse", attributes: [.link: URL(string: repo)!]))
-        credits.append(NSAttributedString(
-            string: "\n\nInspired by Quick View Calendar by Jeffery Morgan",
-            attributes: [.foregroundColor: NSColor.secondaryLabelColor]
-        ))
         let centered = NSMutableParagraphStyle()
         centered.alignment = .center
         credits.addAttributes([.paragraphStyle: centered, .font: NSFont.systemFont(ofSize: 11)],
@@ -223,6 +222,7 @@ struct CalendarView: View {
         }
         NSApp.orderFrontStandardAboutPanel(options: [
             .credits: credits,
+            NSApplication.AboutPanelOptionKey(rawValue: "Copyright"): "",  // already shown in credits
             .version: "",  // CFBundleVersion matches the short version; skip the "(1.0.x)" suffix
         ])
     }
