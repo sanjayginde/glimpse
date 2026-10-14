@@ -159,7 +159,8 @@ struct CalendarView: View {
 
             Divider()
 
-            FooterActionRow(title: "Quit Glimpse") {
+            FooterActionRow(title: "About Glimpse", action: showAboutPanel)
+            FooterActionRow(title: "Quit") {
                 NSApplication.shared.terminate(nil)
             }
         }
@@ -195,6 +196,35 @@ struct CalendarView: View {
     // .preferredColorScheme doesn't reach the MenuBarExtra panel, so set it app-wide
     private func applyAppearance(alwaysDark: Bool) {
         NSApp.appearance = alwaysDark ? NSAppearance(named: .darkAqua) : nil
+    }
+
+    // Standard AppKit panel: icon, name, and version come from the bundle's Info.plist
+    private func showAboutPanel() {
+        // The panel always draws its copyright line last, so render it here to keep the link below it
+        let copyright = Bundle.main.object(forInfoDictionaryKey: "NSHumanReadableCopyright") as? String ?? ""
+        let credits = NSMutableAttributedString(
+            string: "Inspired by Quick View Calendar by Jeffery Morgan\n\n",
+            attributes: [.foregroundColor: NSColor.secondaryLabelColor]
+        )
+        credits.append(NSAttributedString(string: "\(copyright)\n", attributes: [.foregroundColor: NSColor.labelColor]))
+        let repo = "https://github.com/sanjayginde/glimpse"
+        credits.append(NSAttributedString(string: "github.com/sanjayginde/glimpse", attributes: [.link: URL(string: repo)!]))
+        let centered = NSMutableParagraphStyle()
+        centered.alignment = .center
+        credits.addAttributes([.paragraphStyle: centered, .font: NSFont.systemFont(ofSize: 11)],
+                              range: NSRange(location: 0, length: credits.length))
+
+        // LSUIElement apps aren't frontmost, so activate or the panel opens behind other windows
+        if #available(macOS 14, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .credits: credits,
+            NSApplication.AboutPanelOptionKey(rawValue: "Copyright"): "",  // already shown in credits
+            .version: "",  // CFBundleVersion matches the short version; skip the "(1.0.x)" suffix
+        ])
     }
 
     private func goMonth(_ delta: Int) {
