@@ -27,7 +27,7 @@ macOS 13 or later
 brew install --cask sanjayginde/tap/glimpse
 ```
 
-Or download the latest zip from [Releases](https://github.com/sanjayginde/glimpse/releases). Glimpse is ad-hoc signed (not notarized), so for a manual download run `xattr -dr com.apple.quarantine Glimpse.app` before first launch. The Homebrew cask does this for you.
+Or download the latest zip from [Releases](https://github.com/sanjayginde/glimpse/releases). Releases are signed with a Developer ID and notarized by Apple, so the app opens without Gatekeeper warnings.
 
 ## Build
 
