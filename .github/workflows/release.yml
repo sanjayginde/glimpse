@@ -42,8 +42,78 @@ jobs:
           xcodebuild -version
           swift --version
 
+      - name: Import signing certificate
+        id: signing
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
+        run: |
+          REQUIRED=(MACOS_CERT_P12 MACOS_CERT_PASSWORD NOTARY_KEY_P8 NOTARY_KEY_ID NOTARY_ISSUER)
+          MISSING=()
+          for name in "${REQUIRED[@]}"; do
+            [ -n "${!name}" ] || MISSING+=("${name}")
+          done
+
+          # A partial set is a misconfiguration, never a reason to quietly skip signing
+          if [ "${#MISSING[@]}" -gt 0 ] && [ "${#MISSING[@]}" -lt "${#REQUIRED[@]}" ]; then
+            echo "::error::Signing secrets incomplete; missing: ${MISSING[*]}"
+            exit 1
+          fi
+
+          if [ "${#MISSING[@]}" -eq "${#REQUIRED[@]}" ]; then
+            # Fork PRs get no secrets; releases must never ship un-notarized
+            if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
+              echo "::error::Signing secrets not configured; refusing to publish an un-notarized release"
+              exit 1
+            fi
+            echo "::warning::No signing secrets; building ad-hoc signed"
+            exit 0
+          fi
+          KEYCHAIN="${RUNNER_TEMP}/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 24)"
+          echo "${MACOS_CERT_P12}" | base64 --decode > "${RUNNER_TEMP}/cert.p12"
+          security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN}"
+          security set-keychain-settings -lut 3600 "${KEYCHAIN}"
+          security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN}"
+          security import "${RUNNER_TEMP}/cert.p12" -k "${KEYCHAIN}" \
+            -P "${MACOS_CERT_PASSWORD}" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN}"
+          security list-keychains -d user -s "${KEYCHAIN}" $(security list-keychains -d user | tr -d '"')
+          rm -f "${RUNNER_TEMP}/cert.p12"
+
+          IDENTITY=$(security find-identity -v -p codesigning "${KEYCHAIN}" \
+            | sed -nE 's/.*"(Developer ID Application: [^"]+)".*/\1/p' | head -1)
+          if [ -z "${IDENTITY}" ]; then
+            echo "::error::No Developer ID Application identity in MACOS_CERT_P12"
+            exit 1
+          fi
+          echo "identity=${IDENTITY}" >> "$GITHUB_OUTPUT"
+
+          echo "${NOTARY_KEY_P8}" > "${RUNNER_TEMP}/notary_key.p8"
+
       - name: Build Glimpse.app
-        run: ./build-macos-app.sh
+        env:
+          SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
+          NOTARY_KEY_PATH: ${{ runner.temp }}/notary_key.p8
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
+        # Empty SIGN_IDENTITY falls back to ad-hoc in the script
+        run: |
+          if [ -n "${SIGN_IDENTITY}" ]; then
+            ./build-macos-app.sh --notarize
+          else
+            ./build-macos-app.sh
+          fi
+
+      - name: Clean up signing keychain
+        if: always() && steps.signing.outputs.identity != ''
+        run: |
+          security delete-keychain "${RUNNER_TEMP}/signing.keychain-db" || true
+          rm -f "${RUNNER_TEMP}/notary_key.p8"
 
       - name: Package
         id: package
