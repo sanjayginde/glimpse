@@ -109,6 +109,8 @@ cat > "${PLIST_FILE}" <<EOL
     <true/>
     <key>CFBundleIconFile</key>
     <string>icon</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2026 Sanjay Ginde · MIT License</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
 </dict>
