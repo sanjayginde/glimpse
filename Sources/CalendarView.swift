@@ -206,6 +206,10 @@ struct CalendarView: View {
         )
         let repo = "https://github.com/sanjayginde/glimpse"
         credits.append(NSAttributedString(string: "github.com/sanjayginde/glimpse", attributes: [.link: URL(string: repo)!]))
+        credits.append(NSAttributedString(
+            string: "\n\nInspired by Quick View Calendar by Jeffery Morgan",
+            attributes: [.foregroundColor: NSColor.secondaryLabelColor]
+        ))
         let centered = NSMutableParagraphStyle()
         centered.alignment = .center
         credits.addAttributes([.paragraphStyle: centered, .font: NSFont.systemFont(ofSize: 11)],
