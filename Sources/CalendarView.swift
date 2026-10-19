@@ -18,6 +18,8 @@ struct CalendarWeekRow: Identifiable {
 func buildWeekRows(for monthStart: Date, firstWeekday: Int = 1) -> [CalendarWeekRow] {
     var cal = Calendar.current
     cal.firstWeekday = firstWeekday
+    // Monday start → ISO 8601 week numbers, whatever the locale's own week-1 rule
+    if firstWeekday == 2 { cal.minimumDaysInFirstWeek = 4 }
 
     guard let monthRange = cal.range(of: .day, in: .month, for: monthStart) else { return [] }
     let daysInMonth = monthRange.count
@@ -71,15 +73,22 @@ struct CalendarView: View {
     @AppStorage("alwaysDarkMode") private var alwaysDarkMode: Bool = false
     // Mirrors SMAppService rather than @AppStorage — the user can also change it in System Settings
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    private let dowMinScale: CGFloat = 0.8
 
     private var headerTitle: String {
         let f = DateFormatter()
-        f.dateFormat = "MMMM yyyy"
+        f.setLocalizedDateFormatFromTemplate("MMMMyyyy")  // locale picks order and form, e.g. "2026年10月"
         return f.string(from: displayedMonth)
     }
 
+    // Localized abbreviations, or single letters where they won't fit the 34pt column even scaled down
     private var dowLabels: [String] {
-        let all = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        let cal = Calendar.current
+        let font = NSFont.systemFont(ofSize: 12, weight: .bold)
+        let fits = cal.shortStandaloneWeekdaySymbols.allSatisfy {
+            ($0 as NSString).size(withAttributes: [.font: font]).width <= 34 / dowMinScale
+        }
+        let all = fits ? cal.shortStandaloneWeekdaySymbols : cal.veryShortStandaloneWeekdaySymbols
         let offset = firstWeekday - 1
         return Array(all[offset...] + all[..<offset])
     }
@@ -117,6 +126,8 @@ struct CalendarView: View {
                     Text(dowLabels[i])
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(dowMinScale)
                         .frame(width: 34)
                 }
             }
