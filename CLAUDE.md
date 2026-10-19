@@ -31,7 +31,7 @@ open "Glimpse.app"
 ## Architecture
 
 SwiftUI-native `MenuBarExtra` with `.window` style — no AppDelegate or NSStatusItem.
-- `@main GlimpseApp` owns `DayProvider` (midnight timer) and the `MenuBarExtra` scene
+- `@main GlimpseApp` owns `DayProvider` (day-change observer) and the `MenuBarExtra` scene
 - `CalendarView` is pure SwiftUI, self-contained state via `@State` / `@AppStorage`
 - `MenuBarExtra.behavior = .window` — popup closes on outside click, stays open for internal clicks
 - `LSUIElement = true` — no Dock icon
@@ -52,13 +52,13 @@ SwiftUI-native `MenuBarExtra` with `.window` style — no AppDelegate or NSStatu
 
 ## Concurrency
 
-Swift 6 strict concurrency. `DayProvider` is `@MainActor`. Timer callbacks use `Task { @MainActor in ... }`.
+Swift 6 strict concurrency. `DayProvider` is `@MainActor`. Notification callbacks use `Task { @MainActor in ... }`.
 
 ## Gotchas
 
 - `cal.firstWeekday` set explicitly in `buildWeekRows` — locale default may be Monday, breaking the Sun–Sat grid
 - `SMAppService.mainApp.register()` silently fails when run outside `/Applications`; use `--install` flag for testing login item
-- Midnight timer uses a recursive one-shot pattern (not 24h repeating) to correctly handle DST transitions
+- Day rollover uses `NSCalendarDayChanged` (plus wake as a backstop), not a `Timer` — a timer's countdown is thrown off by sleep, leaving a stale date after the Mac sleeps through midnight
 - `.buttonStyle(.glass)` on nav buttons gated behind `#available(macOS 26, *)` — falls back to `.plain` on older systems
 - Releases are built by `.github/workflows/release.yml` (pushes to `main` touching `Sources/`, `Resources/`, `Package.swift`); the `update-tap` job then bumps `Casks/glimpse.rb` in `sanjayginde/homebrew-tap` using the `HOMEBREW_TAP_TOKEN` secret
 - CI signs + notarizes when `MACOS_CERT_P12` / `MACOS_CERT_PASSWORD` / `NOTARY_KEY_P8` / `NOTARY_KEY_ID` / `NOTARY_ISSUER` secrets exist; a partial set fails, and with none only PR builds fall back to ad-hoc (releases fail rather than ship un-notarized)

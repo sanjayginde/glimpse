@@ -1,26 +1,29 @@
 import SwiftUI
 import ServiceManagement
 
-// Updates the menu bar day number at midnight (DST-safe one-shot recursion)
+// Updates the menu bar day number whenever the calendar day changes
 @MainActor
 final class DayProvider: ObservableObject {
-    @Published var dayString = "\(Calendar.current.component(.day, from: Date()))"
-    private var timer: Timer?
+    @Published var dayString = DayProvider.today()
 
-    init() { scheduleNextMidnight() }
-
-    private func scheduleNextMidnight() {
-        let cal = Calendar.current
-        guard let tomorrow = cal.date(byAdding: .day, value: 1, to: Date()),
-              let nextMidnight = cal.date(bySettingHour: 0, minute: 0, second: 5, of: tomorrow)
-        else { return }
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: nextMidnight.timeIntervalSinceNow, repeats: false) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.dayString = "\(Calendar.current.component(.day, from: Date()))"
-                self?.scheduleNextMidnight()
-            }
+    init() {
+        // NSCalendarDayChanged fires at midnight and on time zone/clock changes. Unlike a
+        // countdown Timer, it isn't thrown off by sleep; wake is also observed as a backstop.
+        NotificationCenter.default.addObserver(forName: .NSCalendarDayChanged, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.refresh() }
         }
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.refresh() }
+        }
+    }
+
+    private func refresh() {
+        let day = Self.today()
+        if day != dayString { dayString = day }
+    }
+
+    private static func today() -> String {
+        "\(Calendar.current.component(.day, from: Date()))"
     }
 }
 
