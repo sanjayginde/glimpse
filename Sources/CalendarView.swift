@@ -1,4 +1,5 @@
 import SwiftUI
+import ServiceManagement
 
 struct CalendarDay: Identifiable {
     let id: String
@@ -66,6 +67,8 @@ struct CalendarView: View {
     @AppStorage("showDateInIcon") private var showDateInIcon: Bool = true
     @AppStorage("firstWeekday") private var firstWeekday: Int = 1
     @AppStorage("alwaysDarkMode") private var alwaysDarkMode: Bool = false
+    // Mirrors SMAppService rather than @AppStorage — the user can also change it in System Settings
+    @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     private var headerTitle: String {
         let f = DateFormatter()
@@ -140,6 +143,7 @@ struct CalendarView: View {
             FooterToggleRow(title: "Show Week Numbers", isOn: $showWeekNumbers)
             FooterToggleRow(title: "Show Date in Menu Icon", isOn: $showDateInIcon)
             FooterToggleRow(title: "Always Use Dark Mode", isOn: $alwaysDarkMode)
+            FooterToggleRow(title: "Launch at Login", isOn: launchAtLoginBinding)
 
             HStack {
                 Text("First Day of Week")
@@ -169,6 +173,7 @@ struct CalendarView: View {
         .onAppear {
             displayedMonth = currentMonthStart()
             applyAppearance(alwaysDark: alwaysDarkMode)
+            launchAtLogin = SMAppService.mainApp.status == .enabled
         }
         .onChange(of: alwaysDarkMode) { applyAppearance(alwaysDark: $0) }
     }
@@ -191,6 +196,25 @@ struct CalendarView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    // Re-reads the real status after each change, so a failed or unapproved registration unchecks the box
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { launchAtLogin },
+            set: { enable in
+                let service = SMAppService.mainApp
+                do {
+                    if enable { try service.register() } else { try service.unregister() }
+                } catch {
+                    NSLog("Glimpse: launch at login \(enable ? "register" : "unregister") failed: \(error)")
+                }
+                if service.status == .requiresApproval {
+                    SMAppService.openSystemSettingsLoginItems()
+                }
+                launchAtLogin = service.status == .enabled
+            }
+        )
     }
 
     // .preferredColorScheme doesn't reach the MenuBarExtra panel, so set it app-wide

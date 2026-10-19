@@ -58,6 +58,7 @@ Swift 6 strict concurrency. `DayProvider` is `@MainActor`. Notification callback
 
 - `cal.firstWeekday` set explicitly in `buildWeekRows` — locale default may be Monday, breaking the Sun–Sat grid
 - `SMAppService.mainApp.register()` silently fails when run outside `/Applications`; use `--install` flag for testing login item
+- Launch at Login is opt-in and not stored in `@AppStorage` — the footer checkbox reads `SMAppService.mainApp.status` (refreshed on popup open), since the user can also change it in System Settings → Login Items
 - Day rollover uses `NSCalendarDayChanged` (plus wake as a backstop), not a `Timer` — a timer's countdown is thrown off by sleep, leaving a stale date after the Mac sleeps through midnight
 - `.buttonStyle(.glass)` on nav buttons gated behind `#available(macOS 26, *)` — falls back to `.plain` on older systems
 - Releases are built by `.github/workflows/release.yml` (pushes to `main` touching `Sources/`, `Resources/`, `Package.swift`); the `update-tap` job then bumps `Casks/glimpse.rb` in `sanjayginde/homebrew-tap` using the `HOMEBREW_TAP_TOKEN` secret

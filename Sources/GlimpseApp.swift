@@ -1,5 +1,4 @@
 import SwiftUI
-import ServiceManagement
 
 // Updates the menu bar day number whenever the calendar day changes
 @MainActor
@@ -31,13 +30,6 @@ final class DayProvider: ObservableObject {
 struct GlimpseApp: App {
     @StateObject private var dayProvider = DayProvider()
     @AppStorage("showDateInIcon") private var showDateInIcon: Bool = true
-
-    init() {
-        let service = SMAppService.mainApp
-        if service.status == .notRegistered {
-            try? service.register()
-        }
-    }
 
     var body: some Scene {
         MenuBarExtra {

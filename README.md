@@ -14,7 +14,7 @@ The original Quick View Calendar is an Intel-only app that is no longer maintain
 - Configurable first day of week (Sunday, Monday, Saturday)
 - Weekend days in bold, out-of-month days in italic
 - Optional day number in the menu bar icon
-- Launches at login
+- Optional launch at login
 - macOS Tahoe (macOS 26) Liquid Glass support
 
 ## Requirements
