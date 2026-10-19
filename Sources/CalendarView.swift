@@ -18,8 +18,13 @@ struct CalendarWeekRow: Identifiable {
 func buildWeekRows(for monthStart: Date, firstWeekday: Int = 1) -> [CalendarWeekRow] {
     var cal = Calendar.current
     cal.firstWeekday = firstWeekday
-    // Monday start → ISO 8601 week numbers, whatever the locale's own week-1 rule
-    if firstWeekday == 2 { cal.minimumDaysInFirstWeek = 4 }
+    // Monday start → ISO 8601 week numbers. A separate calendar, since Calendar.current may be
+    // Persian, Hebrew, etc., which number weeks from their own new year
+    var weekCal = cal
+    if firstWeekday == 2 {
+        weekCal = Calendar(identifier: .iso8601)
+        weekCal.timeZone = cal.timeZone
+    }
 
     guard let monthRange = cal.range(of: .day, in: .month, for: monthStart) else { return [] }
     let daysInMonth = monthRange.count
@@ -58,7 +63,7 @@ func buildWeekRows(for monthStart: Date, firstWeekday: Int = 1) -> [CalendarWeek
         }
         let dayOffset = (row * 7) - leadingCount
         let rowDate = cal.date(byAdding: .day, value: dayOffset, to: monthStart) ?? monthStart
-        return CalendarWeekRow(id: row, weekNumber: cal.component(.weekOfYear, from: rowDate), days: days)
+        return CalendarWeekRow(id: row, weekNumber: weekCal.component(.weekOfYear, from: rowDate), days: days)
     }
 }
 

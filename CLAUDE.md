@@ -57,7 +57,7 @@ Swift 6 strict concurrency. `DayProvider` is `@MainActor`. Notification callback
 ## Gotchas
 
 - `cal.firstWeekday` set explicitly in `buildWeekRows` — locale default may be Monday, breaking the Sun–Sat grid
-- Monday start sets `minimumDaysInFirstWeek = 4` so week numbers are ISO 8601; Sunday/Saturday keep the locale's rule
+- Monday start computes week numbers with `Calendar(identifier: .iso8601)` — not just `minimumDaysInFirstWeek = 4` on `Calendar.current`, which is wrong for Persian/Hebrew/Islamic system calendars; Sunday/Saturday keep the current calendar's rule
 - Dates and weekday labels follow the system locale only because `Info.plist` has no `CFBundleDevelopmentRegion` — adding it (with no `.lproj` folders) makes `Locale.current` resolve to `en_<region>` and the calendar turns English
 - `SMAppService.mainApp.register()` silently fails when run outside `/Applications`; use `--install` flag for testing login item
 - Launch at Login is opt-in and not stored in `@AppStorage` — the footer checkbox reads `SMAppService.mainApp.status` (refreshed on popup open), since the user can also change it in System Settings → Login Items
