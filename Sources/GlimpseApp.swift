@@ -41,7 +41,7 @@ struct GlimpseApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            CalendarView()
+            CalendarView(dayProvider: dayProvider)
         } label: {
             // Template-rendered — system tints to match menu bar color automatically
             HStack(spacing: 3) {
