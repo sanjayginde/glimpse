@@ -35,7 +35,7 @@ jobs:
       version: ${{ steps.package.outputs.version }}
       sha256: ${{ steps.package.outputs.sha256 }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Show toolchain
         run: |
@@ -147,7 +147,7 @@ jobs:
       VERSION: ${{ needs.release.outputs.version }}
       SHA256: ${{ needs.release.outputs.sha256 }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           repository: sanjayginde/homebrew-tap
           # Fine-grained PAT with Contents: read & write on sanjayginde/homebrew-tap
