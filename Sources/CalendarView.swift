@@ -61,6 +61,8 @@ func buildWeekRows(for monthStart: Date, firstWeekday: Int = 1) -> [CalendarWeek
 }
 
 struct CalendarView: View {
+    // Observed only to re-render on day change, so the today highlight moves while the popup is open
+    @ObservedObject var dayProvider: DayProvider
     @State private var displayedMonth: Date = currentMonthStart()
     @State private var isTitleHovered = false
     @AppStorage("showWeekNumbers") private var showWeekNumbers: Bool = true
